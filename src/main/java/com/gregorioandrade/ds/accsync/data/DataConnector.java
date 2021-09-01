@@ -4,7 +4,7 @@ import reactor.core.publisher.Mono;
 
 public interface DataConnector {
 
-    Mono<Void> createRequest(String discordId, String verificationToken);
-    Mono<Boolean> hasRequest(String discordId);
-    Mono<Void> deleteRequest(String discordId);
+    Mono<Void> createRequest(long discordId, short verificationToken);
+    Mono<Boolean> hasRequest(long discordId);
+    Mono<Void> deleteRequest(long discordId);
 }
