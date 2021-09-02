@@ -41,7 +41,7 @@ public class MySQLConnector implements DataConnector {
 
         String createTableStatement = "CREATE TABLE IF NOT EXISTS `active_requests` (" +
                 "`discord_id` BIGINT NOT NULL," +
-                "`token` SMALLINT NOT NULL," +
+                "`token` INT NOT NULL," +
                 "`created_timestamp` BIGINT NOT NULL," +
                 "PRIMARY KEY (`discord_id`)" +
                 ")";
@@ -54,7 +54,7 @@ public class MySQLConnector implements DataConnector {
     }
 
     @Override
-    public Mono<Void> createRequest(long discordId, short verificationToken) {
+    public Mono<Void> createRequest(long discordId, int verificationToken) {
         Runnable runnable = () -> {
             try (Connection connection = dataSource.getConnection();
                  PreparedStatement statement = connection.prepareStatement("REPLACE INTO `active_requests` (discord_id, token, created_timestamp) VALUES (?, ?, ?);")){
