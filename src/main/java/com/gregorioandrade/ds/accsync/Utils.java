@@ -7,7 +7,7 @@ public class Utils {
     private static final Random RANDOM = new Random();
 
     public static String generateRandomSixDigitString(){
-        return String.format("%06d", RANDOM.nextInt(999999));
+        return String.format("%d%05d", RANDOM.nextInt(9)+1, RANDOM.nextInt(100000));
     }
 
 }
