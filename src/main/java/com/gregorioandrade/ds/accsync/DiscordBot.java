@@ -4,34 +4,33 @@ import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.core.object.entity.User;
 
 public class DiscordBot {
 
+    public static GatewayDiscordClient CLIENT;
+
     public static void main(String[] args){
-        GatewayDiscordClient client = DiscordClientBuilder.create(args[0])
+        CLIENT = DiscordClientBuilder.create(args[0])
                 .build()
                 .login()
                 .block();
 
-        client.getEventDispatcher().on(ReadyEvent.class)
+        CLIENT.getEventDispatcher().on(ReadyEvent.class)
                 .subscribe(event -> System.out.println("Now I'm the man on the inside looking out."));
 
-        client.getEventDispatcher().on(MessageCreateEvent.class)
+        RequestHandler requestHandler = new RequestHandler();
+
+        CLIENT.getEventDispatcher().on(MessageCreateEvent.class)
                 .filter(event -> event.getGuildId().isPresent()) // So it can only be used in guild channels
                 .map(MessageCreateEvent::getMessage)
                 .filter(message -> message.getAuthor().map(user -> !user.isBot()).orElse(false))
                 .filter(message -> message.getContent().equalsIgnoreCase("!verificar"))
-                .filterWhen(message -> message.getChannel().map(channel -> {
-                    channel.createMessage("Código enviado, revisa tus mensajes privados.").subscribe();
-                    return true;
-                }))
-                .map(message -> message.getAuthor().get())
-                .flatMap(User::getPrivateChannel)
-                .flatMap(channel -> channel.createMessage("Tu código es: "+Utils.generateRandomSixDigitString()))
+                .flatMap(message -> requestHandler.tryRequest(message.getAuthor().get().getId().asLong())
+                        .flatMap(result -> message.getChannel().flatMap(ch -> ch.createMessage(result)))
+                )
                 .subscribe();
 
-        client.onDisconnect().block();
+        CLIENT.onDisconnect().block();
     }
 
 }
