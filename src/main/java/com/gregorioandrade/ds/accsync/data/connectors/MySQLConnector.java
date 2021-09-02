@@ -1,16 +1,11 @@
 package com.gregorioandrade.ds.accsync.data.connectors;
 
 import com.gregorioandrade.ds.accsync.data.DataConnector;
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import reactor.core.publisher.Mono;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,7 +13,7 @@ import java.util.function.Supplier;
 
 public class MySQLConnector implements DataConnector {
 
-    private final DataSource dataSource;
+    private final HikariDataSource dataSource;
     private final ExecutorService executorService;
 
     public MySQLConnector(){
@@ -42,7 +37,7 @@ public class MySQLConnector implements DataConnector {
         String createTableStatement = "CREATE TABLE IF NOT EXISTS `active_requests` (" +
                 "`discord_id` BIGINT NOT NULL," +
                 "`token` INT NOT NULL," +
-                "`created_timestamp` BIGINT NOT NULL," +
+                "`created_at` DATE NOT NULL," +
                 "PRIMARY KEY (`discord_id`)" +
                 ")";
 
@@ -57,10 +52,10 @@ public class MySQLConnector implements DataConnector {
     public Mono<Void> createRequest(long discordId, int verificationToken) {
         Runnable runnable = () -> {
             try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement("REPLACE INTO `active_requests` (discord_id, token, created_timestamp) VALUES (?, ?, ?);")){
+                 PreparedStatement statement = connection.prepareStatement("REPLACE INTO `active_requests` (discord_id, token, created_at) VALUES (?, ?, ?);")){
                 statement.setLong(1, discordId);
                 statement.setInt(2, verificationToken);
-                statement.setLong(3, System.currentTimeMillis());
+                statement.setDate(3, new Date(System.currentTimeMillis()));
                 statement.execute();
             } catch (SQLException exception){
                 exception.printStackTrace();
@@ -92,7 +87,7 @@ public class MySQLConnector implements DataConnector {
     public Mono<Void> deleteRequest(long discordId) {
         Runnable runnable = () -> {
             try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement("DELETE * FROM `active_requests` WHERE discord_id = ?;")){
+                 PreparedStatement statement = connection.prepareStatement("DELETE FROM `active_requests` WHERE discord_id = ?;")){
                 statement.setLong(1, discordId);
                 statement.execute();
             } catch (SQLException exception){
@@ -101,5 +96,26 @@ public class MySQLConnector implements DataConnector {
         };
         CompletableFuture<Void> future = CompletableFuture.runAsync(runnable, executorService);
         return Mono.fromFuture(future);
+    }
+
+    @Override
+    public Mono<Void> purgeOldRequests(int minutesOld) {
+        Runnable runnable = () -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement statement = connection.prepareStatement("DELETE FROM `active_requests` WHERE created_at < now() - INTERVAL ? MINUTE;")){
+                statement.setInt(1, minutesOld);
+                statement.execute();
+            } catch (SQLException exception){
+                exception.printStackTrace();
+            }
+        };
+        CompletableFuture<Void> future = CompletableFuture.runAsync(runnable, executorService);
+        return Mono.fromFuture(future);
+    }
+
+    @Override
+    public void disconnect() {
+        executorService.shutdown();
+        dataSource.close();
     }
 }

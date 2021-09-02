@@ -31,6 +31,7 @@ public class DiscordBot {
                 .subscribe();
 
         CLIENT.onDisconnect().block();
+        requestHandler.shutdown();
     }
 
 }

@@ -6,9 +6,23 @@ import discord4j.common.util.Snowflake;
 import discord4j.core.object.entity.User;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 public class RequestHandler {
 
     private final DataConnector connector = new MySQLConnector();
+    private final ScheduledExecutorService  scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+
+    private final int minutesToPurge = 5;
+
+    {
+        scheduledExecutor.scheduleAtFixedRate(
+                () -> {
+                    connector.purgeOldRequests(minutesToPurge);
+                }, 1, 1, TimeUnit.MINUTES);
+    }
 
     public Mono<String> tryRequest(long id){
         return connector.hasRequest(id)
@@ -27,6 +41,11 @@ public class RequestHandler {
                                 .flatMap(user -> Mono.just("Código enviado. Revisa tus mensajes privados!"));
                     }
                 });
+    }
+
+    public void shutdown(){
+        scheduledExecutor.shutdown();
+        connector.disconnect();
     }
 
 }
