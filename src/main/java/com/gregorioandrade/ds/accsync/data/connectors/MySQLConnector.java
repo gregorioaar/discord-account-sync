@@ -6,6 +6,9 @@ import com.zaxxer.hikari.HikariDataSource;
 import reactor.core.publisher.Mono;
 
 import java.sql.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -110,6 +113,49 @@ public class MySQLConnector implements DataConnector {
             }
         };
         CompletableFuture<Void> future = CompletableFuture.runAsync(runnable, executorService);
+        return Mono.fromFuture(future);
+    }
+
+    @Override
+    public Mono<Boolean> isSynced(long discordId) {
+        Supplier<Boolean> runnable = () -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement statement = connection.prepareStatement("SELECT 1 FROM `synced_accounts` WHERE discord_id = ?;")){
+                statement.setLong(1, discordId);
+                try (ResultSet set = statement.executeQuery()){
+                    return set.next();
+                }
+            } catch (SQLException exception){
+                exception.printStackTrace();
+            }
+            return false;
+        };
+        CompletableFuture<Boolean> future = CompletableFuture.supplyAsync(runnable, executorService);
+        return Mono.fromFuture(future);
+    }
+
+    @Override
+    public Mono<Map<String, Object>> getData(long discordId) {
+        Supplier<Map<String, Object>> runnable = () -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement statement = connection.prepareStatement("SELECT 1 FROM `active_requests` WHERE discord_id = ?;")){
+                statement.setLong(1, discordId);
+                try (ResultSet set = statement.executeQuery()){
+                    if (set.next()){
+                        Map<String, Object> dataMap = new HashMap<>();
+                        ResultSetMetaData metaData = set.getMetaData();
+                        for (int i = 1; i <= metaData.getColumnCount(); i++){
+                            dataMap.put(metaData.getColumnName(i), set.getObject(i));
+                        }
+                        return dataMap;
+                    }
+                }
+            } catch (SQLException exception){
+                exception.printStackTrace();
+            }
+            return Collections.emptyMap();
+        };
+        CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(runnable, executorService);
         return Mono.fromFuture(future);
     }
 
