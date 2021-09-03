@@ -135,17 +135,17 @@ public class MySQLConnector implements DataConnector {
     }
 
     @Override
-    public Mono<Map<String, Object>> getData(long discordId) {
-        Supplier<Map<String, Object>> runnable = () -> {
+    public Mono<Map<String, String>> getData(long discordId) {
+        Supplier<Map<String, String>> runnable = () -> {
             try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement("SELECT 1 FROM `active_requests` WHERE discord_id = ?;")){
+                 PreparedStatement statement = connection.prepareStatement("SELECT * FROM `synced_accounts` WHERE discord_id = ?;")){
                 statement.setLong(1, discordId);
                 try (ResultSet set = statement.executeQuery()){
                     if (set.next()){
-                        Map<String, Object> dataMap = new HashMap<>();
+                        Map<String, String> dataMap = new HashMap<>();
                         ResultSetMetaData metaData = set.getMetaData();
                         for (int i = 1; i <= metaData.getColumnCount(); i++){
-                            dataMap.put(metaData.getColumnName(i), set.getObject(i));
+                            dataMap.put(metaData.getColumnName(i), set.getString(i));
                         }
                         return dataMap;
                     }
@@ -155,7 +155,7 @@ public class MySQLConnector implements DataConnector {
             }
             return Collections.emptyMap();
         };
-        CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(runnable, executorService);
+        CompletableFuture<Map<String, String>> future = CompletableFuture.supplyAsync(runnable, executorService);
         return Mono.fromFuture(future);
     }
 

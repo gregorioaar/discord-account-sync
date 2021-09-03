@@ -11,7 +11,7 @@ public interface DataConnector {
     Mono<Void> deleteRequest(long discordId);
     Mono<Void> purgeOldRequests(int minutesOld);
     Mono<Boolean> isSynced(long discordId);
-    Mono<Map<String, Object>> getData(long discordId);
+    Mono<Map<String, String>> getData(long discordId);
 
     void disconnect();
 }

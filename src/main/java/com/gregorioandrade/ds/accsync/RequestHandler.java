@@ -6,6 +6,7 @@ import discord4j.common.util.Snowflake;
 import discord4j.core.object.entity.User;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +36,17 @@ public class RequestHandler {
                             return channel.createMessage("Tu código es: "+token).subscribe();
                 })
                 .flatMap(user -> Mono.just("Código enviado. Revisa tus mensajes privados!")));
+    }
+
+    public Mono<String> tryUserData(long id){
+        return connector.isSynced(id).flatMap(is -> !is ? Mono.just("El usuario no está verificado") : Mono.empty())
+                .switchIfEmpty(connector.getData(id).map(map -> {
+                    String response = "";
+                    for (Map.Entry<String, String> dataEntry : map.entrySet()){
+                        response += "**"+dataEntry.getKey()+":** "+dataEntry.getValue()+"\n";
+                    }
+                    return response;
+                }));
     }
 
     public void shutdown(){
