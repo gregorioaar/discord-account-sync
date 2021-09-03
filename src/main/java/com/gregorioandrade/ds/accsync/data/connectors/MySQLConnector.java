@@ -40,7 +40,7 @@ public class MySQLConnector implements DataConnector {
         String createTableStatement = "CREATE TABLE IF NOT EXISTS `active_requests` (" +
                 "`discord_id` BIGINT NOT NULL," +
                 "`token` INT NOT NULL," +
-                "`created_at` DATE NOT NULL," +
+                "`created_at` TIMESTAMP NOT NULL," +
                 "PRIMARY KEY (`discord_id`)" +
                 ")";
 
@@ -58,7 +58,7 @@ public class MySQLConnector implements DataConnector {
                  PreparedStatement statement = connection.prepareStatement("REPLACE INTO `active_requests` (discord_id, token, created_at) VALUES (?, ?, ?);")){
                 statement.setLong(1, discordId);
                 statement.setInt(2, verificationToken);
-                statement.setDate(3, new Date(System.currentTimeMillis()));
+                statement.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
                 statement.execute();
             } catch (SQLException exception){
                 exception.printStackTrace();
